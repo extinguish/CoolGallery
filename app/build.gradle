@@ -1,0 +1,91 @@
+apply plugin: 'com.android.application'
+
+apply plugin: 'kotlin-android'
+
+apply plugin: 'kotlin-android-extensions'
+
+import org.apache.tools.ant.taskdefs.condition.Os
+
+android {
+    compileSdkVersion 27
+
+    sourceSets {
+        main {
+            java {
+                srcDirs = ['src/gallerycommon', 'src/main/java', 'src_pad/']
+            }
+//            jni {
+//                // 指定filters和jpeg_stream的代码目录
+//                srcDirs = ['src/main/jni', 'src/main/jni_jpegstream']
+//            }
+//            jniLibs {
+//                srcDirs = ['src/libs']
+//            }
+        }
+    }
+
+    defaultConfig {
+        applicationId "com.cool"
+        minSdkVersion 22
+        targetSdkVersion 27
+        versionCode 1
+        versionName "1.0"
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+//        externalNativeBuild {
+//            cmake {
+//                cppFlags ""
+//            }
+//        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+    // CMakeLists技巧暂时没有掌握，所以目前暂时使用Android.mk
+    // 之后转换成CMakeLists.txt,因为CMakeLists和Gradle的融合更加友好一些
+//    externalNativeBuild {
+//        cmake {
+//            path "CMakeLists.txt"
+//        }
+//    }
+
+    // 使用Apache Http client
+    useLibrary 'org.apache.http.legacy'
+
+    defaultConfig {
+        renderscriptTargetApi 24
+        renderscriptSupportModeEnabled true
+    }
+
+    task ndkBuild(type: Exec) {
+        if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+            commandLine 'ndk-build.cmd', '-C', file('src/main').absolutePath
+        } else {
+            // 按照Os当中的定义，除了Windows,剩下的基本都是*Unix体系了
+            println "jni directory are ${file('src/main/jni/').absolutePath}"
+            commandLine 'ndk-build', file('src/main/jni/').absolutePath
+            commandLine 'ndk-build', '-C', file('src/main/jni').absolutePath
+        }
+    }
+
+    tasks.withType(JavaCompile) { compileTask ->
+        compileTask.dependsOn ndkBuild
+    }
+
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+    implementation 'com.android.support:appcompat-v7:27.1.1'
+    implementation 'com.android.support.constraint:constraint-layout:1.1.0'
+    testImplementation 'junit:junit:4.12'
+    androidTestImplementation 'com.android.support.test:runner:1.0.2'
+    androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
+    implementation 'com.android.support:support-v13:27.1.1'
+
+    implementation project(':mp4parser')
+    implementation project(':xmp_toolkit')
+}
